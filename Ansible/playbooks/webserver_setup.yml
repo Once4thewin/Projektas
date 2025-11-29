@@ -1,0 +1,136 @@
+---
+- name: Setup Web Server with Docker LAMP
+  hosts: webserver
+  become: yes
+  vars:
+    db_host: "{{ hostvars['db-vm']['ansible_host'] }}"
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - gnupg
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose
+        state: present
+        update_cache: yes
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create LAMP Docker directory
+      file:
+        path: /opt/lamp_docker
+        state: directory
+
+    - name: Copy Dockerfile
+      copy:
+        dest: /opt/lamp_docker/Dockerfile
+        content: |
+          FROM ubuntu:24.04
+          
+          ENV DEBIAN_FRONTEND=noninteractive
+          
+          # Install LAMP stack
+          RUN apt-get update && \
+              apt-get install -y \
+              apache2 \
+              mysql-client \
+              php \
+              libapache2-mod-php \
+              php-mysql \
+              php-curl \
+              php-gd \
+              php-mbstring \
+              php-xml \
+              php-xmlrpc \
+              php-zip && \
+              apt-get clean
+          
+          # Enable Apache modules
+          RUN a2enmod rewrite
+          
+          # Configure Apache
+          RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+          
+          EXPOSE 80
+          
+          CMD ["apache2ctl", "-D", "FOREGROUND"]
+
+    - name: Build LAMP Docker image
+      docker_image:
+        name: custom_lamp
+        tag: latest
+        source: build
+        build:
+          path: /opt/lamp_docker
+
+    - name: Create hospital application directory
+      file:
+        path: /var/www/hospital
+        state: directory
+        mode: '0755'
+
+    - name: Copy hospital application files
+      synchronize:
+        src: ../files/hospital_app/
+        dest: /var/www/hospital/
+
+    - name: Create docker-compose file
+      copy:
+        dest: /opt/lamp_docker/docker-compose.yml
+        content: |
+          version: '3'
+          services:
+            lamp:
+              image: custom_lamp:latest
+              container_name: hospital_lamp
+              ports:
+                - "80:80"
+              volumes:
+                - /var/www/hospital:/var/www/html
+              environment:
+                - DB_HOST={{ db_host }}
+                - DB_NAME=hospital_db
+                - DB_USER=hospital_user
+                - DB_PASS=HospitalPass123!
+              restart: always
+
+    - name: Start LAMP container
+      docker_compose:
+        project_src: /opt/lamp_docker
+        state: present
+
+    - name: Wait for Apache to be ready
+      wait_for:
+        port: 80
+        delay: 5
+        timeout: 30

@@ -1,0 +1,35 @@
+---
+- name: Setup Client Machine
+  hosts: client
+  become: yes
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install desktop and browser
+      apt:
+        name:
+          - ubuntu-desktop
+          - firefox
+          - vim
+        state: present
+
+    - name: Create regular user
+      user:
+        name: patient
+        password: "{{ 'PatientPass123!' | password_hash('sha512') }}"
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+        create_home: yes
+
+    - name: Configure auto-login for GDM3
+      blockinfile:
+        path: /etc/gdm3/custom.conf
+        block: |
+          [daemon]
+          AutomaticLoginEnable = true
+          AutomaticLogin = patient
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
