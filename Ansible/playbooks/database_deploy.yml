@@ -16,19 +16,19 @@
 
     - name: Copy Dockerfile to database VM
       copy:
-        src: ../../docker/database/Dockerfile
+        src: "{{ playbook_dir }}/../docker/database/Dockerfile"
         dest: "{{ docker_dir }}/Dockerfile"
         mode: '0644'
 
     - name: Copy init.sql to database VM
       copy:
-        src: ../../docker/database/init.sql
+        src: "{{ playbook_dir }}/../docker/database/init.sql"
         dest: "{{ docker_dir }}/init.sql"
         mode: '0644'
 
     - name: Copy docker-compose.yml to database VM
       copy:
-        src: ../../docker/database/docker-compose.yml
+        src: "{{ playbook_dir }}/../docker/database/docker-compose.yml"
         dest: "{{ docker_dir }}/docker-compose.yml"
         mode: '0644'
 

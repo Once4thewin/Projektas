@@ -23,19 +23,19 @@
 
     - name: Copy Dockerfile to webserver VM
       copy:
-        src: ../../docker/webserver/Dockerfile
+        src: "{{ playbook_dir }}/../docker/webserver/Dockerfile"
         dest: "{{ docker_dir }}/Dockerfile"
         mode: '0644'
 
     - name: Copy lamp_install.sh to webserver VM
       copy:
-        src: ../../docker/webserver/lamp_install.sh
+        src: "{{ playbook_dir }}/../docker/webserver/lamp_install.sh"
         dest: "{{ docker_dir }}/lamp_install.sh"
         mode: '0755'
 
     - name: Copy docker-compose.yml to webserver VM
       copy:
-        src: ../../docker/webserver/docker-compose.yml
+        src: "{{ playbook_dir }}/../docker/webserver/docker-compose.yml"
         dest: "{{ docker_dir }}/docker-compose.yml"
         mode: '0644'
 
@@ -47,10 +47,10 @@
         backup: yes
 
     - name: Copy hospital application files (if they exist)
-      synchronize:
-        src: ../../hospital_app/
+      copy:
+        src: "{{ playbook_dir }}/../hospital_app/"
         dest: "{{ hospital_app_dir }}/"
-      delegate_to: localhost
+        mode: '0755'
       when: hospital_app_dir is defined
       ignore_errors: yes
 

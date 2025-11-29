@@ -16,13 +16,13 @@
 
     - name: Copy Dockerfile to client VM
       copy:
-        src: ../../docker/client/Dockerfile
+        src: "{{ playbook_dir }}/../docker/client/Dockerfile"
         dest: "{{ docker_dir }}/Dockerfile"
         mode: '0644'
 
     - name: Copy docker-compose.yml to client VM
       copy:
-        src: ../../docker/client/docker-compose.yml
+        src: "{{ playbook_dir }}/../docker/client/docker-compose.yml"
         dest: "{{ docker_dir }}/docker-compose.yml"
         mode: '0644'
 

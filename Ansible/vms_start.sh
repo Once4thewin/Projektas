@@ -214,11 +214,79 @@ ansible all -m ping || {
 # Create playbooks directory structure
 PLAYBOOKS_DIR="$ANSIBLE_DIR/playbooks"
 sudo mkdir -p "$PLAYBOOKS_DIR"
-cd "$PLAYBOOKS_DIR"
 
-# Note: Docker files and playbooks should be copied to ansible-vm
-# This can be done via SCP from the host machine or included in the VM image
-# For now, we assume they will be available at the correct paths
+# Project directory - check common locations
+PROJECT_DIR=""
+if [ -d "$HOME/Projektas" ]; then
+    PROJECT_DIR="$HOME/Projektas"
+elif [ -d "$HOME/project" ]; then
+    PROJECT_DIR="$HOME/project"
+elif [ -d "$HOME" ]; then
+    # Check if docker and ansible directories exist in home
+    if [ -d "$HOME/docker" ] && [ -d "$HOME/ansible" ]; then
+        PROJECT_DIR="$HOME"
+    fi
+fi
+
+if [ -z "$PROJECT_DIR" ]; then
+    echo "Error: Project directory not found!"
+    echo "Looking for project in: $HOME/Projektas, $HOME/project, or $HOME"
+    echo "Please ensure the project files (docker/, ansible/) are available."
+    exit 1
+fi
+
+echo "Project directory found: $PROJECT_DIR"
+
+# Copy playbooks to ansible directory
+if [ -d "$PROJECT_DIR/ansible/playbooks" ]; then
+    echo "Copying playbooks from $PROJECT_DIR/ansible/playbooks..."
+    sudo cp -r "$PROJECT_DIR/ansible/playbooks"/* "$PLAYBOOKS_DIR/" 2>/dev/null || {
+        echo "Warning: Could not copy all playbooks, continuing..."
+    }
+    sudo chmod +x "$PLAYBOOKS_DIR"/*.yml 2>/dev/null || true
+elif [ -d "$PROJECT_DIR/playbooks" ]; then
+    echo "Copying playbooks from $PROJECT_DIR/playbooks..."
+    sudo cp -r "$PROJECT_DIR/playbooks"/* "$PLAYBOOKS_DIR/" 2>/dev/null || {
+        echo "Warning: Could not copy all playbooks, continuing..."
+    }
+    sudo chmod +x "$PLAYBOOKS_DIR"/*.yml 2>/dev/null || true
+else
+    echo "Error: Playbooks directory not found at $PROJECT_DIR/ansible/playbooks or $PROJECT_DIR/playbooks"
+    exit 1
+fi
+
+# Copy docker directory structure to ansible directory for playbook access
+DOCKER_SRC="$PROJECT_DIR/docker"
+DOCKER_DEST="$ANSIBLE_DIR/docker"
+if [ -d "$DOCKER_SRC" ]; then
+    echo "Copying Docker files from $DOCKER_SRC to $DOCKER_DEST..."
+    sudo rm -rf "$DOCKER_DEST" 2>/dev/null || true
+    sudo cp -r "$DOCKER_SRC" "$DOCKER_DEST" || {
+        echo "Error: Failed to copy Docker files"
+        exit 1
+    }
+    echo "Docker files copied successfully"
+else
+    echo "Error: Docker directory not found at $DOCKER_SRC"
+    exit 1
+fi
+
+# Copy hospital_app if it exists
+HOSPITAL_APP_SRC="$PROJECT_DIR/hospital_app"
+HOSPITAL_APP_DEST="$ANSIBLE_DIR/hospital_app"
+if [ -d "$HOSPITAL_APP_SRC" ]; then
+    echo "Copying hospital_app from $HOSPITAL_APP_SRC..."
+    sudo cp -r "$HOSPITAL_APP_SRC" "$HOSPITAL_APP_DEST" || {
+        echo "Warning: Failed to copy hospital_app, continuing..."
+    }
+else
+    echo "Info: hospital_app directory not found (optional)"
+fi
+
+cd "$PLAYBOOKS_DIR"
+echo "Working directory: $(pwd)"
+echo "Available playbooks:"
+ls -la *.yml 2>/dev/null || echo "No playbooks found!"
 
 echo ""
 echo "=========================================="
