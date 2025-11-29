@@ -36,8 +36,8 @@ cat > create_vms.yml << "EOF"
     - name: Create webserver vm
       community.general.one_vm:
         api_url: "https://grid5.mif.vu.lt/cloud3/RPC2"
-        api_username: "mama1325"
-        api_password: "Kalendorius#123"
+        api_username: "joda0846"
+        api_password: "Joris123."
         template_name: "ubuntu-24.04"
         attributes:
           name: "webserver-vm"
@@ -47,8 +47,8 @@ cat > create_vms.yml << "EOF"
     - name: Create db vm
       community.general.one_vm:
         api_url: "https://grid5.mif.vu.lt/cloud3/RPC2"
-        api_username: "mama1325"
-        api_password: "Kalendorius#123"
+        api_username: "tili1267"
+        api_password: "Ltu120320#"
         template_name: "ubuntu-24.04"
         attributes:
           name: "db-vm"
@@ -58,8 +58,8 @@ cat > create_vms.yml << "EOF"
     - name: Create client vm
       community.general.one_vm:
         api_url: "https://grid5.mif.vu.lt/cloud3/RPC2"
-        api_username: "mama1325"
-        api_password: "Kalendorius#123"
+        api_username: "tili1267"
+        api_password: "Ltu120320#"
         template_name: "ubuntu-24.04"
         attributes:
           name: "client-vm"
