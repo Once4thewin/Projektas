@@ -1,0 +1,21 @@
+---
+- name: Configure All Hospital System Components
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+    
+    - name: Install common packages
+      apt:
+        name:
+          - curl
+          - wget
+          - vim
+          - git
+        state: present
+

@@ -1,0 +1,68 @@
+---
+- name: Create Virtual Machines in OpenNebula
+  hosts: localhost
+  gather_facts: no
+  vars:
+    team_members_file: "{{ playbook_dir }}/../config/team_members.conf"
+  
+  tasks:
+    - name: Read team members configuration
+      slurp:
+        src: "{{ team_members_file }}"
+      register: team_config
+      when: team_members_file is defined
+
+    - name: Parse team member 1 (ansible-vm)
+      set_fact:
+        team_member_1: "{{ team_config.content | b64decode | regex_findall('TEAM_MEMBER_1=(.+)') | first | default('') }}"
+      when: team_config is defined
+
+    - name: Parse team member 2 (db-vm)
+      set_fact:
+        team_member_2: "{{ team_config.content | b64decode | regex_findall('TEAM_MEMBER_2=(.+)') | first | default('') }}"
+      when: team_config is defined
+
+    - name: Parse team member 3 (webserver-vm)
+      set_fact:
+        team_member_3: "{{ team_config.content | b64decode | regex_findall('TEAM_MEMBER_3=(.+)') | first | default('') }}"
+      when: team_config is defined
+
+    - name: Parse team member 4 (client-vm)
+      set_fact:
+        team_member_4: "{{ team_config.content | b64decode | regex_findall('TEAM_MEMBER_4=(.+)') | first | default('') }}"
+      when: team_config is defined
+
+    - name: Create ansible-vm in team member 1's account
+      shell: |
+        bash {{ playbook_dir }}/../ansible_vm/ansible_vm.sh
+      register: ansible_vm_result
+      changed_when: true
+
+    - name: Create db-vm in team member 2's account
+      shell: |
+        bash {{ playbook_dir }}/../ansible_vm/create_db_vm.sh
+      register: db_vm_result
+      changed_when: true
+      when: team_member_2 is defined
+
+    - name: Create webserver-vm in team member 3's account
+      shell: |
+        bash {{ playbook_dir }}/../ansible_vm/create_webserver_vm.sh
+      register: webserver_vm_result
+      changed_when: true
+      when: team_member_3 is defined
+
+    - name: Create client-vm in team member 4's account
+      shell: |
+        bash {{ playbook_dir }}/../ansible_vm/create_client_vm.sh
+      register: client_vm_result
+      changed_when: true
+      when: team_member_4 is defined
+
+    - name: Wait for all VMs to be ready
+      pause:
+        seconds: 60
+
+    - name: Display VM creation results
+      debug:
+        msg: "VMs created successfully. Check .vm_info file for IP addresses."
