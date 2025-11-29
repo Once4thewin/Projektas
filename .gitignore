@@ -1,0 +1,10 @@
+# OpenNebula authentication files (contain passwords)
+.one_auth_*
+
+# VM information files
+.vm_info
+
+# Temporary files
+*.tmp
+*.log
+

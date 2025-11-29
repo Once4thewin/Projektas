@@ -8,11 +8,19 @@ CONFIG_FILE="$ROOT_DIR/../config/team_members.conf"
 
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
-    IFS=':' read -r USERNAME ENDPOINT TEMPLATE <<< "$TEAM_MEMBER_3"
+    IFS=':' read -r USERNAME PASSWORD ENDPOINT TEMPLATE <<< "$TEAM_MEMBER_3"
 else
     echo "Error: team_members.conf not found"
     exit 1
 fi
+
+# Set OpenNebula authentication
+export ONE_XMLRPC="$ENDPOINT"
+export ONE_AUTH="$ROOT_DIR/../.one_auth_${USERNAME}"
+
+# Create ONE_AUTH file with username:password
+echo "${USERNAME}:${PASSWORD}" > "$ONE_AUTH"
+chmod 600 "$ONE_AUTH"
 
 echo "Creating webserver-vm in $USERNAME's OpenNebula account..."
 
@@ -27,15 +35,19 @@ CONTEXT = [ NETWORK = "YES", SSH_PUBLIC_KEY = "\$USER[SSH_PUBLIC_KEY]" ]
 EOF
 )
 
-echo "$VM_TEMPLATE" | onevm create -u "$USERNAME" - || {
+echo "$VM_TEMPLATE" | onevm create - || {
     echo "Error: Failed to create webserver-vm"
+    rm -f "$ONE_AUTH"
     exit 1
 }
 
 sleep 30
-VM_ID=$(onevm list -u "$USERNAME" | grep webserver-vm | awk '{print $1}')
-VM_IP=$(onevm show "$VM_ID" -u "$USERNAME" | grep IP | head -1 | awk '{print $2}')
+VM_ID=$(onevm list | grep webserver-vm | awk '{print $1}')
+VM_IP=$(onevm show "$VM_ID" | grep IP | head -1 | awk '{print $2}')
 
 echo "webserver-vm IP: $VM_IP"
 echo "webserver_VM_IP=$VM_IP" >> "$ROOT_DIR/../.vm_info"
+
+# Clean up auth file
+rm -f "$ONE_AUTH"
 
