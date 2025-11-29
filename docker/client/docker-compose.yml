@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hospital_client
+    ports:
+      - "5900:5900"  # VNC port
+    environment:
+      - DISPLAY=:1
+      - VNC_PASSWORD=vncpass
+    networks:
+      - hospital_network
+    restart: unless-stopped
+    # Note: For GUI access, use VNC client to connect to container
+    # Or use X11 forwarding if running on host with display
+
+networks:
+  hospital_network:
+    driver: bridge
+

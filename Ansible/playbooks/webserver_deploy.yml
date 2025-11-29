@@ -1,0 +1,87 @@
+---
+- name: Deploy webserver container on webserver-vm
+  hosts: webserver
+  become: yes
+  gather_facts: yes
+
+  vars:
+    docker_dir: /opt/docker/webserver
+    hospital_app_dir: /opt/hospital_app
+
+  tasks:
+    - name: Create Docker directory structure
+      file:
+        path: "{{ docker_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create hospital application directory
+      file:
+        path: "{{ hospital_app_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy Dockerfile to webserver VM
+      copy:
+        src: ../../docker/webserver/Dockerfile
+        dest: "{{ docker_dir }}/Dockerfile"
+        mode: '0644'
+
+    - name: Copy lamp_install.sh to webserver VM
+      copy:
+        src: ../../docker/webserver/lamp_install.sh
+        dest: "{{ docker_dir }}/lamp_install.sh"
+        mode: '0755'
+
+    - name: Copy docker-compose.yml to webserver VM
+      copy:
+        src: ../../docker/webserver/docker-compose.yml
+        dest: "{{ docker_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Update docker-compose.yml with database IP
+      lineinfile:
+        path: "{{ docker_dir }}/docker-compose.yml"
+        regexp: 'DB_HOST=.*'
+        line: "      - DB_HOST={{ hostvars['db-vm']['ansible_host'] }}"
+        backup: yes
+
+    - name: Copy hospital application files (if they exist)
+      synchronize:
+        src: ../../hospital_app/
+        dest: "{{ hospital_app_dir }}/"
+      delegate_to: localhost
+      when: hospital_app_dir is defined
+      ignore_errors: yes
+
+    - name: Build webserver Docker image
+      docker_image:
+        name: hospital_webserver
+        tag: latest
+        source: build
+        build:
+          path: "{{ docker_dir }}"
+        state: present
+
+    - name: Start webserver container using docker-compose
+      docker_compose:
+        project_src: "{{ docker_dir }}"
+        state: present
+        pull: no
+
+    - name: Wait for Apache to be ready
+      wait_for:
+        port: 80
+        host: "{{ ansible_host }}"
+        delay: 10
+        timeout: 60
+
+    - name: Verify webserver container is running
+      command: docker ps --filter "name=hospital_webserver" --format "{{.Status}}"
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        msg: "Webserver container: {{ container_status.stdout }}"
+

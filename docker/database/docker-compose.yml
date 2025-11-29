@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  database:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hospital_database
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=RootPass123!
+      - MYSQL_DATABASE=hospital_db
+      - MYSQL_USER=hospital_user
+      - MYSQL_PASSWORD=HospitalPass123!
+    networks:
+      - hospital_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  hospital_network:
+    driver: bridge
+

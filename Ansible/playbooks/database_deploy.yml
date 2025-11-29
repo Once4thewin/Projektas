@@ -1,0 +1,74 @@
+---
+- name: Deploy database container on db-vm
+  hosts: db
+  become: yes
+  gather_facts: yes
+
+  vars:
+    docker_dir: /opt/docker/database
+
+  tasks:
+    - name: Create Docker directory structure
+      file:
+        path: "{{ docker_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy Dockerfile to database VM
+      copy:
+        src: ../../docker/database/Dockerfile
+        dest: "{{ docker_dir }}/Dockerfile"
+        mode: '0644'
+
+    - name: Copy init.sql to database VM
+      copy:
+        src: ../../docker/database/init.sql
+        dest: "{{ docker_dir }}/init.sql"
+        mode: '0644'
+
+    - name: Copy docker-compose.yml to database VM
+      copy:
+        src: ../../docker/database/docker-compose.yml
+        dest: "{{ docker_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Build database Docker image
+      docker_image:
+        name: hospital_database
+        tag: latest
+        source: build
+        build:
+          path: "{{ docker_dir }}"
+        state: present
+
+    - name: Start database container using docker-compose
+      docker_compose:
+        project_src: "{{ docker_dir }}"
+        state: present
+        pull: no
+
+    - name: Wait for MySQL to be ready
+      wait_for:
+        port: 3306
+        host: "{{ ansible_host }}"
+        delay: 10
+        timeout: 60
+
+    - name: Verify database container is running
+      command: docker ps --filter "name=hospital_database" --format "{{.Status}}"
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        msg: "Database container: {{ container_status.stdout }}"
+
+    - name: Check MySQL connection
+      mysql_db:
+        login_host: "{{ ansible_host }}"
+        login_user: root
+        login_password: RootPass123!
+        name: hospital_db
+        state: present
+      ignore_errors: yes
+

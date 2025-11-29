@@ -1,0 +1,67 @@
+---
+- name: Deploy client browser container on client-vm
+  hosts: client
+  become: yes
+  gather_facts: yes
+
+  vars:
+    docker_dir: /opt/docker/client
+
+  tasks:
+    - name: Create Docker directory structure
+      file:
+        path: "{{ docker_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy Dockerfile to client VM
+      copy:
+        src: ../../docker/client/Dockerfile
+        dest: "{{ docker_dir }}/Dockerfile"
+        mode: '0644'
+
+    - name: Copy docker-compose.yml to client VM
+      copy:
+        src: ../../docker/client/docker-compose.yml
+        dest: "{{ docker_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Build client browser Docker image
+      docker_image:
+        name: hospital_client
+        tag: latest
+        source: build
+        build:
+          path: "{{ docker_dir }}"
+        state: present
+
+    - name: Start client container using docker-compose
+      docker_compose:
+        project_src: "{{ docker_dir }}"
+        state: present
+        pull: no
+
+    - name: Wait for VNC to be ready
+      wait_for:
+        port: 5900
+        host: "{{ ansible_host }}"
+        delay: 10
+        timeout: 60
+
+    - name: Verify client container is running
+      command: docker ps --filter "name=hospital_client" --format "{{.Status}}"
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        msg: "Client browser container: {{ container_status.stdout }}"
+
+    - name: Display VNC connection info
+      debug:
+        msg:
+          - "Client browser container is running"
+          - "Connect via VNC to: {{ ansible_host }}:5900"
+          - "Default VNC password: vncpass"
+          - "Browsers available: Opera, Chrome, Midori"
+

@@ -1,3 +1,6 @@
+-- Database initialization script
+-- Creates database schema for hospital management system
+
 USE hospital_db;
 
 CREATE TABLE IF NOT EXISTS users (
